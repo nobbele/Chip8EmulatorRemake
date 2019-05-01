@@ -154,6 +154,7 @@
     <ClCompile Include="Chip8EmulatorRemake.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="imgui\examples\example_emscripten\shell_minimal.html" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

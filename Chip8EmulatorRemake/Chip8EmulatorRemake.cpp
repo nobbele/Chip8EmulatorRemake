@@ -98,26 +98,26 @@ struct Chip8
 		registers.I = 0;
 		registers.SP = 0;
 
-		for (int i = 0; i < registers.Vregister_count; i++) 
+		for (unsigned int i = 0; i < registers.Vregister_count; i++)
 		{
 			registers.V[i] = 0;
 		}
 
-		for (int i = 0; i < stack.size; i++) 
+		for (unsigned int i = 0; i < stack.size; i++) 
 		{
 			stack.data[i] = 0;
 		}
 
-		for (int i = 0; i < memory_size; ++i) 
+		for (unsigned int i = 0; i < memory_size; ++i)
 		{
 			memory.data[i] = 0;
 		}
-		for (int i = 0; i < 80; ++i) 
+		for (unsigned int i = 0; i < 80; ++i)
 		{
 			memory.data[0x50 + i] = chip8_fontset[i];
 		}
 
-		for (int i = 0; i < screen_width * screen_height; i++) 
+		for (unsigned int i = 0; i < screen_width * screen_height; i++)
 		{
 			screen.data[i] = 0;
 		}
@@ -172,7 +172,7 @@ struct WorkingChip8
 				{
 					case 0xE0:
 					{
-						for (int i = 0; i < chip->screen.width * chip->screen.height; i++) {
+						for (unsigned int i = 0; i < chip->screen.width * chip->screen.height; i++) {
 							chip->screen.data[i] = 0;
 						}
 					} break;
@@ -218,7 +218,7 @@ struct WorkingChip8
 			case 0x6:
 			{
 				uint8_t register_index = get_nibble(inst, 0x0F00, 2);
-				uint16_t value = inst & 0x00FF;
+				uint8_t value = inst & 0x00FF;
 				chip->registers.V[register_index] = value;
 			} break;
 			case 0x7:
@@ -264,7 +264,7 @@ struct WorkingChip8
 					} break;
 					case 6:
 					{
-						chip->registers.VF = chip->registers.V[register_index] & 1 != 0 ? 1 : 0;
+						chip->registers.VF = (chip->registers.V[register_index] & 1) != 0 ? 1 : 0;
 						chip->registers.V[register_index] >>= 1;
 					} break;
 					case 7:
@@ -276,7 +276,7 @@ struct WorkingChip8
 					} break;
 					case 0xE:
 					{
-						chip->registers.VF = chip->registers.V[register_index] & (1 << 7) != 0 ? 1 : 0;
+						(chip->registers.VF = chip->registers.V[register_index] & (1 << 7)) != 0 ? 1 : 0;
 						chip->registers.V[register_index] <<= 1;
 					} break;
 				}
@@ -410,15 +410,18 @@ struct WorkingChip8
 
 const int pixel_scale = 10;
 
+// SDL pls
 #undef main
+
 int main()
 {
-	srand(time(NULL));
+	srand((unsigned int)time(nullptr));
 
 	Chip8 chip8(4096, 16, 64, 32);
 	WorkingChip8 workingChip8(&chip8);
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) 
+	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		return -1;
 	}
@@ -428,13 +431,15 @@ int main()
 		chip8.screen.width * pixel_scale, chip8.screen.height * pixel_scale,
 		SDL_WINDOW_SHOWN
 	);
-	if (!window) {
+	if (!window) 
+	{
 		printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
 		return 2;
 	}
 
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-	if (!renderer) {
+	if (!renderer) 
+	{
 		printf("Renderers could not be created! SDL_Error: %s\n", SDL_GetError());
 		return 3;
 	}
@@ -453,38 +458,48 @@ int main()
 		{
 
 		}
-		else {
+		else 
+		{
 			workingChip8.run_cycle();
 
-			if (workingChip8.exit) {
+			if (workingChip8.exit) 
+			{
 				workingChip8.exit = false;
 				workingChip8.halted = true;
 				printf("Halted\n");
 				continue;
 			}
 
-			if (workingChip8.redraw) {
-				SDL_RenderClear(renderer);
+			SDL_RenderClear(renderer);
 
-				for (int x = 0; x < chip8.screen.width; x++) {
-					for (int y = 0; y < chip8.screen.height; y++) {
+			if (workingChip8.redraw) 
+			{
+				for (unsigned int x = 0; x < chip8.screen.width; x++)
+				{
+					for (unsigned int y = 0; y < chip8.screen.height; y++)
+					{
 						if (chip8.screen.data[x + (y * chip8.screen.width)]) 
 						{
 							SDL_SetRenderDrawColor(renderer, 0x66, 0xFF, 0x66, 0xFF);
 							printf("Drawing %d, %d\n", x, y);
 						}
-						SDL_Rect pixel = SDL_Rect({ x, y, 1, 1 });
+						SDL_Rect pixel = SDL_Rect({ (int)x, (int)y, 1, 1 });
 						SDL_RenderFillRect(renderer, &pixel);
 						SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
 					}
 				}
-
-				SDL_RenderPresent(renderer);
 			}
+
+			SDL_RenderPresent(renderer);
 		}
 
 		SDL_Delay(1 / 60);
 	}
+
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 
 	return 0;
 }
