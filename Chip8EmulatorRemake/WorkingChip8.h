@@ -4,8 +4,8 @@
 #include <SDL.h>
 #include "Chip8.h"
 
-template<typename T>
-constexpr T get_nibble(const T num, const unsigned int mask, const unsigned int nibble_shift)
+template<typename RT, typename T>
+constexpr RT get_nibble(const T num, const unsigned int mask, const unsigned int nibble_shift)
 {
 	return (num & mask) >> (4 * nibble_shift);
 }
@@ -13,11 +13,12 @@ constexpr T get_nibble(const T num, const unsigned int mask, const unsigned int 
 struct WorkingChip8
 {
 	bool redraw = false;
-	bool exit = false;
 	bool halted = false;
 
 	Chip8 *const chip;
 	WorkingChip8(Chip8 *const chip);
+
+	void load_program(uint8_t *data, size_t data_size);
 
 	uint16_t *current_stack_value_ptr();
 	void push_stack(uint16_t value);
@@ -28,5 +29,5 @@ struct WorkingChip8
 	unsigned long cycle_count = 0;
 	void run_cycle();
 
-	void draw(SDL_Renderer *renderer);
+	void draw(SDL_Renderer *renderer, unsigned int offsetX = 0, unsigned int offsetY = 0, int pixel_scale = 0);
 };
