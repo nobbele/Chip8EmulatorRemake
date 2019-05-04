@@ -38,8 +38,11 @@ inline int get_item_width()
 
 struct menu_item
 {
-	const char *title;
-	std::function<void()> on_click;
+	const char *const title = nullptr;
+	SDL_Texture *title_texture = nullptr;
+	int title_text_width = -1;
+	int title_text_height = -1;
+	std::function<void()> on_click = nullptr;
 
 	inline SDL_Rect get_rect(const int index, const int spacing, const int item_width)
 	{
@@ -50,7 +53,37 @@ struct menu_item
 	{
 		return get_rect(index, menu_item_spacing, get_item_width());
 	}
+	
+	inline SDL_Rect get_text_rect(SDL_Rect &border)
+	{
+		if (title_text_width == -1 || title_text_height == -1) 
+		{
+			TTF_SizeText(arial, title, &title_text_width, &title_text_height);
+		}
+		return { border.x + (border.w - title_text_width) / 2, border.y, title_text_width, title_text_height };
+	}
+
+	void copy_to_renderer(SDL_Renderer *renderer, SDL_Color text_color, SDL_Rect &container);
+
+	~menu_item();
 };
+
+void menu_item::copy_to_renderer(SDL_Renderer *renderer, SDL_Color text_color, SDL_Rect &container)
+{
+	SDL_Rect text_rect = get_text_rect(container);
+	if (!title_texture) 
+	{
+		SDL_Surface *message_surface = TTF_RenderText_Solid(arial, title, text_color);
+		title_texture = SDL_CreateTextureFromSurface(renderer, message_surface);
+		SDL_FreeSurface(message_surface);
+	}
+	SDL_RenderCopy(renderer, title_texture, nullptr, &text_rect);
+}
+
+menu_item::~menu_item()
+{
+	SDL_DestroyTexture(title_texture);
+}
 
 menu_item menu_items[menu_item_count] = { { "Load ROM" }, { "Reset" }, { "Halt" } };
 
@@ -68,18 +101,7 @@ void draw_menu(SDL_Renderer *renderer)
 
 		SDL_Color text_color = { 0, 0, 0, 0 };
 
-		SDL_Surface *message_surface = TTF_RenderText_Solid(arial, menu_items[i].title, text_color);
-		SDL_Texture *message_texture = SDL_CreateTextureFromSurface(renderer, message_surface);
-		SDL_FreeSurface(message_surface);
-
-		int message_width;
-		int message_height;
-		TTF_SizeText(arial, menu_items[i].title, &message_width, &message_height);
-		SDL_Rect text_rect = { border.x + (border.w - message_width) / 2, border.y, message_width, message_height };
-
-		SDL_RenderCopy(renderer, message_texture, nullptr, &text_rect);
-		SDL_DestroyTexture(message_texture);
-
+		menu_items[i].copy_to_renderer(renderer, text_color, border);
 	}
 }
 
