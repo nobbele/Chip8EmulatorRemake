@@ -19,6 +19,8 @@ int window_height = 0;
 const unsigned int menu_item_count = 3;
 const int menu_item_spacing = 2;
 
+double time_scale = 1;
+
 TTF_Font *arial;
 
 SDL_Texture *get_string_texture(SDL_Renderer *renderer, const char *const str, SDL_Color text_color)
@@ -129,7 +131,7 @@ int main()
 	int halt_text_height;
 	TTF_SizeText(arial, halt_text, &halt_text_width, &halt_text_height);
 
-	uint8_t *program = new uint8_t[8]{ 0x60,0x02, 0xF0,0x29, 0xD5,0x55, 0x00,0xFD };
+	const uint8_t *program = new uint8_t[8]{ 0x60,0x02, 0xF0,0x29, 0xD5,0x55, 0x00,0xFD };
 	size_t program_size = 8;
 
 	// Load ROM
@@ -157,19 +159,20 @@ int main()
 		fseek(rom_file, 0, SEEK_SET);
 
 		delete program;
-		program = new uint8_t[program_size];
-		fread(program, sizeof(uint8_t), program_size, rom_file);
+		uint8_t *buf = new uint8_t[program_size];
+		fread(buf, sizeof(uint8_t), program_size, rom_file);
+		program = buf;
 
-		workingChip8.load_program(program, program_size);
 		workingChip8.reset();
+		workingChip8.load_program(program, program_size);
 
 		fclose(rom_file);
-
 	}; 
 	// Reset
-	menu_items[1].on_click = [&workingChip8, program, program_size]()
+	menu_items[1].on_click = [&workingChip8, &program, &program_size]()
 	{
 		workingChip8.reset();
+		workingChip8.load_program(program, program_size);
 	};
 	// Halt
 	menu_items[2].on_click = [&workingChip8]()
@@ -225,7 +228,7 @@ int main()
 		SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
 		SDL_RenderPresent(renderer);
 
-		SDL_Delay(1 / 60);
+		SDL_Delay(static_cast<unsigned int>((1.0f / 60 * 1000) / time_scale));
 	}
 	exit:
 

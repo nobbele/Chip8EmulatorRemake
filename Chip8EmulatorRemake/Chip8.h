@@ -7,11 +7,12 @@ struct Chip8
 	uint8_t *fontset;
 	struct Screen
 	{
+		const size_t size;
 		const size_t width;
 		const size_t height;
 		uint8_t *const data;
 		Screen(const size_t width, const size_t height)
-			: width(width), height(height), data(new uint8_t[width * height])
+			: width(width), height(height), size(width * height), data(new uint8_t[size])
 		{}
 		~Screen()
 		{
@@ -102,14 +103,7 @@ struct Chip8
 		    0xF0, 0x80, 0xF0, 0x80, 0xF0, //E
 		    0xF0, 0x80, 0xF0, 0x80, 0x80  //F
 	    })
-	{
-		for (unsigned int i = 0; i < memory.size; ++i) {
-			memory.data[i] = 0;
-		}
-		for (unsigned int i = 0; i < 80; ++i) {
-			memory.data[0x50 + i] = fontset[i];
-		}
-	}
+	{}
 
 	~Chip8()
 	{

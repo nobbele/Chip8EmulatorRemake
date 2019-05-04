@@ -3,11 +3,12 @@
 #include <cstdlib>
 #include <cinttypes>
 #include <ctime>
+#include <cstring>
 
 WorkingChip8::WorkingChip8(Chip8 *const chip)
 	: chip(chip)
 {
-	halted = false;
+	halted = true;
 	redraw = false;
 
 	cycle_count = 0;
@@ -16,9 +17,7 @@ WorkingChip8::WorkingChip8(Chip8 *const chip)
 void WorkingChip8::load_program(const uint8_t *const data, const size_t data_size)
 {
 	printf("Loading %zu bytes\n", data_size);
-	for (int i = 0; i < data_size; i++) {
-		chip->memory.data[i + 512] = data[i];
-	}
+	memcpy(chip->memory.data + 0x200, data, data_size);
 }
 
 void WorkingChip8::reset()
@@ -31,17 +30,11 @@ void WorkingChip8::reset()
 	chip->registers.I = 0;
 	chip->registers.SP = 0;
 
-	for (unsigned int i = 0; i < chip->registers.Vregister_count; i++) {
-		chip->registers.V[i] = 0;
-	}
-
-	for (unsigned int i = 0; i < chip->stack.size; i++) {
-		chip->stack.data[i] = 0;
-	}
-
-	for (unsigned int i = 0; i < chip->screen.width * chip->screen.height; i++) {
-		chip->screen.data[i] = 0;
-	}
+	memset(chip->registers.V, 0, chip->registers.Vregister_count);
+	memset(chip->stack.data, 0, chip->stack.size);
+	memset(chip->screen.data, 0, chip->screen.size);
+	memset(chip->memory.data, 0, chip->memory.size);
+	memcpy(chip->memory.data + 0x50, chip->fontset, 80);
 
 	chip->registers.DT = 0;
 	chip->registers.ST = 0;
@@ -292,7 +285,7 @@ bool WorkingChip8::execute(const uint16_t inst)
 				} break;
 				case 0x55:
 				{
-					for (int i = 0; i <= register_index ; i++) {
+					for (int i = 0; i <= register_index; i++) {
 						chip->memory.data[chip->registers.I + i] = chip->registers.V[i];
 					}
 				} break;
