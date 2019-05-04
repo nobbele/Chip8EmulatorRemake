@@ -13,7 +13,7 @@ WorkingChip8::WorkingChip8(Chip8 *const chip)
 	cycle_count = 0;
 }
 
-void WorkingChip8::load_program(uint8_t *data, size_t data_size)
+void WorkingChip8::load_program(const uint8_t *const data, const size_t data_size)
 {
 	printf("Loading %zu bytes\n", data_size);
 	for (int i = 0; i < data_size; i++) {
@@ -52,7 +52,7 @@ uint16_t *WorkingChip8::current_stack_value_ptr()
 	return chip->stack.data + chip->registers.SP;
 }
 
-void WorkingChip8::push_stack(uint16_t value)
+void WorkingChip8::push_stack(const uint16_t value)
 {
 	chip->registers.SP++;
 	*current_stack_value_ptr() = value;
@@ -65,7 +65,7 @@ uint16_t WorkingChip8::pop_stack()
 	return n;
 }
 
-bool WorkingChip8::execute(uint16_t inst)
+bool WorkingChip8::execute(const uint16_t inst)
 {
 	switch (get_nibble<uint8_t>(inst, 0xF000, 3)) {
 		case 0x0:
@@ -154,9 +154,9 @@ bool WorkingChip8::execute(uint16_t inst)
 				} break;
 				case 0x4:
 				{
-					uint16_t res = (uint16_t)chip->registers.V[register_index] + chip->registers.V[other_register_index];
+					uint16_t res = chip->registers.V[register_index] + chip->registers.V[other_register_index];
 					chip->registers.VF = res > 0xFF ? 1 : 0;
-					chip->registers.V[register_index] = (uint8_t)(res & 0xFFFF);
+					chip->registers.V[register_index] = static_cast<uint8_t>(res & 0xFFFF);
 				} break;
 				case 0x5:
 				{
@@ -214,16 +214,15 @@ bool WorkingChip8::execute(uint16_t inst)
 			uint8_t pos_y = chip->registers.V[get_nibble<uint8_t>(inst, 0x00F0, 1)];
 			uint8_t n = inst & 0x000F;
 			chip->registers.VF = 0;
-			for (int y = 0; y < n; y++)
+			for (unsigned int y = 0; y < n; y++)
 			{
 				uint8_t pixel = chip->memory.data[chip->registers.I + y];
-				for (int x = 0; x < 8; x++)
+				for (unsigned int x = 0; x < 8; x++)
 				{
 					if ((pixel & (0x80 >> x)) != 0) 
 					{
-						unsigned int index = ((pos_x + x) % chip->screen.width) + (unsigned int)(((pos_y + y) % chip->screen.height) * chip->screen.width);
-						if (chip->screen.data[index] == 1)
-							chip->registers.VF = 1;
+						unsigned int index = ((pos_x + x) % chip->screen.width) + static_cast<unsigned int>(((pos_y + y) % chip->screen.height) * chip->screen.width);
+						chip->registers.VF = chip->screen.data[index];
 						chip->screen.data[index] ^= 1;
 					}
 				}
@@ -257,10 +256,8 @@ bool WorkingChip8::execute(uint16_t inst)
 				} break;
 				case 0x0A:
 				{
-					if (!waiting_for_input) {
-						waiting_for_input = true;
-					}
-					for (int i = 0; i < 16; i++) 
+					waiting_for_input = true;
+					for (int i = 0; i < chip->keyboard.size; i++)
 					{
 						if (chip->keyboard.data[i]) 
 						{
@@ -326,7 +323,7 @@ void WorkingChip8::run_cycle()
 	}
 
 	if (waiting_for_input) return;
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < chip->keyboard.size; i++) {
 		chip->keyboard.data[i] = false;
 	}
 
@@ -336,7 +333,7 @@ void WorkingChip8::run_cycle()
 	cycle_count++;
 }
 
-void WorkingChip8::draw(SDL_Renderer *renderer, unsigned int offsetX, unsigned int offsetY, int pixel_scale)
+void WorkingChip8::draw(SDL_Renderer *const renderer, const unsigned int offsetX, const unsigned int offsetY, const int pixel_scale)
 {
 	SDL_Rect *rects = new SDL_Rect[chip->screen.width * chip->screen.width];
 	for (unsigned int x = 0; x < chip->screen.width; x++) 
@@ -346,11 +343,11 @@ void WorkingChip8::draw(SDL_Renderer *renderer, unsigned int offsetX, unsigned i
 			size_t index = x + (y * chip->screen.width);
 			if (chip->screen.data[index])
 			{
-				rects[index] = { (int)(x * pixel_scale + offsetX), (int)(y * pixel_scale + offsetY), pixel_scale, pixel_scale };
+				rects[index] = { static_cast<int>(x * pixel_scale + offsetX), static_cast<int>(y * pixel_scale + offsetY), pixel_scale, pixel_scale };
 			}
 		}
 	}
 	SDL_SetRenderDrawColor(renderer, 0x66, 0xFF, 0x66, 0xFF);
-	SDL_RenderFillRects(renderer, rects, (int)(chip->screen.width * chip->screen.width));
+	SDL_RenderFillRects(renderer, rects, static_cast<int>(chip->screen.width * chip->screen.width));
 	delete rects;
 }

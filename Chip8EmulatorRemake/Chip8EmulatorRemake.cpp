@@ -83,7 +83,7 @@ void draw_menu(SDL_Renderer *renderer)
 
 int main()
 {
-	srand((unsigned int)time(nullptr));
+	srand(static_cast<unsigned int>(time(nullptr)));
 
 	Chip8 chip8(4096, 16, 64, 32);
 	WorkingChip8 workingChip8(&chip8);
@@ -94,8 +94,8 @@ int main()
 		return -1;
 	}
 
-	window_width = (int)chip8.screen.width * pixel_scale;
-	window_height = (int)chip8.screen.height * pixel_scale + gui_height;
+	window_width = static_cast<int>(chip8.screen.width * pixel_scale);
+	window_height = static_cast<int>(chip8.screen.height * pixel_scale + gui_height);
 
 	SDL_Window* window = SDL_CreateWindow("CHIP-8 Emulator",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -136,12 +136,12 @@ int main()
 	menu_items[0].on_click = [&workingChip8, &program, &program_size]()
 	{
 		// TODO
-		char path[FILEDIALOGBUFFERSIZE];
+		wchar_t path[FILEDIALOGBUFFERSIZE];
 		open_file_dialog(path);
-		printf("Loading %s\n", path);
+		printf("Loading %S\n", path);
 
 		FILE *rom_file;
-		errno_t err = fopen_s(&rom_file, path, "rb");
+		errno_t err = _wfopen_s(&rom_file, path, L"rb");
 		if (err != 0)
 		{
 			size_t errmsglen = 95; // 94 char + null is the longest message
@@ -176,9 +176,6 @@ int main()
 	{
 		workingChip8.halted ^= 1;
 	};
-
-	//workingChip8.load_program(program, program_size);
-	//workingChip8.reset();
 
 	while (true) 
 	{

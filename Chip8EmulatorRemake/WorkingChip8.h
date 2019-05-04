@@ -7,7 +7,7 @@
 template<typename RT, typename T>
 constexpr RT get_nibble(const T num, const unsigned int mask, const unsigned int nibble_shift)
 {
-	return (num & mask) >> (4 * nibble_shift);
+	return static_cast<RT>((num & mask) >> (4 * nibble_shift));
 }
 
 struct WorkingChip8
@@ -19,17 +19,17 @@ struct WorkingChip8
 	Chip8 *const chip;
 	WorkingChip8(Chip8 *const chip);
 
-	void load_program(uint8_t *data, size_t data_size);
+	void load_program(const uint8_t *const data, const size_t data_size);
 	void reset();
 
 	uint16_t *current_stack_value_ptr();
-	void push_stack(uint16_t value);
+	void push_stack(const uint16_t value);
 	uint16_t pop_stack();
 
-	bool execute(uint16_t inst);
+	bool execute(const uint16_t inst);
 
 	unsigned long cycle_count = 0;
 	void run_cycle();
 
-	void draw(SDL_Renderer *renderer, unsigned int offsetX = 0, unsigned int offsetY = 0, int pixel_scale = 0);
+	void draw(SDL_Renderer *const renderer, const unsigned int offsetX = 0, const unsigned int offsetY = 0, const int pixel_scale = 0);
 };
