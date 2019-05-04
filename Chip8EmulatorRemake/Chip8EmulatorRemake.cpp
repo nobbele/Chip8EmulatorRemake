@@ -2,12 +2,14 @@
 #include <cstdlib>
 #include <cinttypes>
 #include <ctime>
+#include <cerrno>
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <functional>
 // SDL pls
 #undef main
 #include "WorkingChip8.h"
+#include "filedialog.h"
 
 const int pixel_scale = 10;
 const int gui_height = 20;
@@ -131,22 +133,52 @@ int main()
 	size_t program_size = 8;
 
 	// Load ROM
-	menu_items[0].on_click = [&workingChip8, program, program_size]()
+	menu_items[0].on_click = [&workingChip8, &program, &program_size]()
 	{
 		// TODO
+		char path[FILEDIALOGBUFFERSIZE];
+		open_file_dialog(path);
+		printf("Loading %s\n", path);
+
+		FILE *rom_file;
+		errno_t err = fopen_s(&rom_file, path, "rb");
+		if (err != 0)
+		{
+			size_t errmsglen = 95; // 94 char + null is the longest message
+			char *errmsg = new char[errmsglen];
+			strerror_s(errmsg, errmsglen, err);
+			printf("Couldn't Open ROM '%s'", errmsg);
+			delete errmsg;
+			return;
+		}
+
+		fseek(rom_file, 0, SEEK_END);
+		program_size = ftell(rom_file);
+		fseek(rom_file, 0, SEEK_SET);
+
+		delete program;
+		program = new uint8_t[program_size];
+		fread(program, sizeof(uint8_t), program_size, rom_file);
+
+		workingChip8.load_program(program, program_size);
+		workingChip8.reset();
+
+		fclose(rom_file);
+
 	}; 
 	// Reset
 	menu_items[1].on_click = [&workingChip8, program, program_size]()
 	{
-		workingChip8.load_program(program, program_size);
+		workingChip8.reset();
 	};
 	// Halt
 	menu_items[2].on_click = [&workingChip8]()
 	{
-		workingChip8.halted = true;
+		workingChip8.halted ^= 1;
 	};
 
-	workingChip8.load_program(program, program_size);
+	//workingChip8.load_program(program, program_size);
+	//workingChip8.reset();
 
 	while (true) 
 	{

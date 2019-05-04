@@ -14,11 +14,13 @@ struct WorkingChip8
 {
 	bool redraw = false;
 	bool halted = false;
+	bool waiting_for_input = false;
 
 	Chip8 *const chip;
 	WorkingChip8(Chip8 *const chip);
 
 	void load_program(uint8_t *data, size_t data_size);
+	void reset();
 
 	uint16_t *current_stack_value_ptr();
 	void push_stack(uint16_t value);

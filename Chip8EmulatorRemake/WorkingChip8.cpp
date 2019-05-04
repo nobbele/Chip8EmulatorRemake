@@ -21,6 +21,32 @@ void WorkingChip8::load_program(uint8_t *data, size_t data_size)
 	}
 }
 
+void WorkingChip8::reset()
+{
+	halted = false;
+	waiting_for_input = false;
+	cycle_count = 0;
+
+	chip->registers.PC = 0x200;
+	chip->registers.I = 0;
+	chip->registers.SP = 0;
+
+	for (unsigned int i = 0; i < chip->registers.Vregister_count; i++) {
+		chip->registers.V[i] = 0;
+	}
+
+	for (unsigned int i = 0; i < chip->stack.size; i++) {
+		chip->stack.data[i] = 0;
+	}
+
+	for (unsigned int i = 0; i < chip->screen.width * chip->screen.height; i++) {
+		chip->screen.data[i] = 0;
+	}
+
+	chip->registers.DT = 0;
+	chip->registers.ST = 0;
+}
+
 uint16_t *WorkingChip8::current_stack_value_ptr()
 {
 	return chip->stack.data + chip->registers.SP;
@@ -67,7 +93,7 @@ bool WorkingChip8::execute(uint16_t inst)
 		case 0x1:
 		{
 			uint16_t addr = inst & 0x0FFF;
-			chip->registers.PC = addr;
+			chip->registers.PC = addr - 2;
 		} break;
 		case 0x2:
 		{
@@ -79,19 +105,19 @@ bool WorkingChip8::execute(uint16_t inst)
 		{
 			uint8_t register_index = get_nibble<uint8_t>(inst, 0x0F00, 2);
 			uint16_t value = inst & 0x00FF;
-			if (chip->registers.V[register_index] == value) chip->registers.PC++;
+			if (chip->registers.V[register_index] == value) chip->registers.PC += 2;
 		} break;
 		case 0x4:
 		{
 			uint8_t register_index = get_nibble<uint8_t>(inst, 0x0F00, 2);
 			uint16_t value = inst & 0x00FF;
-			if (chip->registers.V[register_index] != value) chip->registers.PC++;
+			if (chip->registers.V[register_index] != value) chip->registers.PC += 2;
 		} break;
 		case 0x5:
 		{
 			uint8_t register_index = get_nibble<uint8_t>(inst, 0x0F00, 2);
 			uint8_t other_register_index = get_nibble<uint8_t>(inst, 0x00F0, 1);
-			if (chip->registers.V[register_index] == chip->registers.V[other_register_index]) chip->registers.PC++;
+			if (chip->registers.V[register_index] == chip->registers.V[other_register_index]) chip->registers.PC += 2;
 		} break;
 		case 0x6:
 		{
@@ -179,22 +205,23 @@ bool WorkingChip8::execute(uint16_t inst)
 		{
 			uint8_t register_index = get_nibble<uint8_t>(inst, 0x0F00, 2);
 			uint16_t value = inst & 0x00FF;
-			chip->registers.V[register_index] += (rand() % 256) & value;
+			int n = rand() % 256;
+			chip->registers.V[register_index] += n & value;
 		} break;
 		case 0xD:
 		{
-			uint8_t x = get_nibble<uint8_t>(inst, 0x0F00, 2);
-			uint8_t y = get_nibble<uint8_t>(inst, 0x00F0, 1);
+			uint8_t pos_x = chip->registers.V[get_nibble<uint8_t>(inst, 0x0F00, 2)];
+			uint8_t pos_y = chip->registers.V[get_nibble<uint8_t>(inst, 0x00F0, 1)];
 			uint8_t n = inst & 0x000F;
 			chip->registers.VF = 0;
-			for (int y = 0; y < n; y++) 
+			for (int y = 0; y < n; y++)
 			{
 				uint8_t pixel = chip->memory.data[chip->registers.I + y];
-				for (int x = 0; x < 8; x++) 
+				for (int x = 0; x < 8; x++)
 				{
 					if ((pixel & (0x80 >> x)) != 0) 
 					{
-						unsigned int index = x + (unsigned int)(y * chip->screen.width);
+						unsigned int index = ((pos_x + x) % chip->screen.width) + (unsigned int)(((pos_y + y) % chip->screen.height) * chip->screen.width);
 						if (chip->screen.data[index] == 1)
 							chip->registers.VF = 1;
 						chip->screen.data[index] ^= 1;
@@ -230,7 +257,18 @@ bool WorkingChip8::execute(uint16_t inst)
 				} break;
 				case 0x0A:
 				{
-					chip->registers.V[register_index] = /*Wait for input*/0;
+					if (!waiting_for_input) {
+						waiting_for_input = true;
+					}
+					for (int i = 0; i < 16; i++) 
+					{
+						if (chip->keyboard.data[i]) 
+						{
+							chip->registers.V[register_index] = i;
+							waiting_for_input = false;
+							break;
+						}
+					}
 				}
 				case 0x15:
 				{
@@ -252,18 +290,18 @@ bool WorkingChip8::execute(uint16_t inst)
 				case 0x33:
 				{
 					chip->memory.data[chip->registers.I] = chip->registers.V[register_index] / 100;
-					chip->memory.data[chip->registers.I + 1] = chip->registers.V[register_index] % 10;
+					chip->memory.data[chip->registers.I + 1] = chip->registers.V[register_index] / 10 % 100;
 					chip->memory.data[chip->registers.I + 2] = chip->registers.V[register_index] % 10;
 				} break;
 				case 0x55:
 				{
-					for (int i = 0; i < register_index; i++) {
+					for (int i = 0; i <= register_index ; i++) {
 						chip->memory.data[chip->registers.I + i] = chip->registers.V[i];
 					}
 				} break;
 				case 0x65:
 				{
-					for (int i = 0; i < register_index; i++) {
+					for (int i = 0; i <= register_index; i++) {
 						chip->registers.V[i] = chip->memory.data[chip->registers.I + i];
 					}
 				} break;
@@ -278,11 +316,23 @@ bool WorkingChip8::execute(uint16_t inst)
 void WorkingChip8::run_cycle()
 {
 	uint16_t inst = ((uint16_t)chip->memory.data[chip->registers.PC] << 8) | chip->memory.data[chip->registers.PC + 1];
-	if (!execute(inst)) {
-		printf("Unknown opcode %x cycle: %d line: %d\n", inst, cycle_count, chip->registers.PC - 0x200);
+	if (!execute(inst)) 
+	{
+		printf("Unknown opcode %04x cycle %d line %d PC %04x\n", inst, cycle_count, (chip->registers.PC - 0x200) / 2, chip->registers.PC);
 	}
+	else
+	{
+		printf("%04x line %d PC %04x\n", inst, (chip->registers.PC - 0x200) / 2, chip->registers.PC);
+	}
+
+	if (waiting_for_input) return;
+	for (int i = 0; i < 16; i++) {
+		chip->keyboard.data[i] = false;
+	}
+
 	chip->registers.PC += 2;
 	if (chip->registers.PC < 0x200) printf("Detected possible OOB code execution\n");
+
 	cycle_count++;
 }
 

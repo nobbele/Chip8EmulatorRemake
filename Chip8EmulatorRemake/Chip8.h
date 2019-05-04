@@ -103,31 +103,12 @@ struct Chip8
 		    0xF0, 0x80, 0xF0, 0x80, 0x80  //F
 	    })
 	{
-		registers.PC = 0x200;
-		registers.I = 0;
-		registers.SP = 0;
-
-		for (unsigned int i = 0; i < registers.Vregister_count; i++) {
-			registers.V[i] = 0;
-		}
-
-		for (unsigned int i = 0; i < stack.size; i++) {
-			stack.data[i] = 0;
-		}
-
-		for (unsigned int i = 0; i < memory_size; ++i) {
+		for (unsigned int i = 0; i < memory.size; ++i) {
 			memory.data[i] = 0;
 		}
 		for (unsigned int i = 0; i < 80; ++i) {
 			memory.data[0x50 + i] = fontset[i];
 		}
-
-		for (unsigned int i = 0; i < screen_width * screen_height; i++) {
-			screen.data[i] = 0;
-		}
-
-		registers.DT = 0;
-		registers.ST = 0;
 	}
 
 	~Chip8()
